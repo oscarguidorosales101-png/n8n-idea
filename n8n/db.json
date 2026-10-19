@@ -1,0 +1,98 @@
+{
+  "facturas": [
+    {
+      "id": "F001",
+      "numero": "F001",
+      "cliente": "Comercial La Central S.A.",
+      "identificacionCliente": "3101123456",
+      "fechaEmision": "2026-09-01",
+      "diasHabilesCredito": 15,
+      "monto": 250000,
+      "moneda": "CRC",
+      "estado": "vencida",
+      "fechaVencimiento": "2026-09-23",
+      "observaciones": "Factura de prueba",
+      "tipoFactura": "nacional",
+      "prioridadCobro": "alta",
+      "ultimaRevision": "2026-10-19T20:23:16.322Z",
+      "reglaAplicada": "Vencimiento calculado en días hábiles; se excluyen sábados, domingos y feriados de Costa Rica."
+    },
+    {
+      "id": "F002",
+      "numero": "F002",
+      "cliente": "Servicios del Valle S.R.L.",
+      "identificacionCliente": "3101987654",
+      "fechaEmision": "2026-10-12",
+      "diasHabilesCredito": 15,
+      "monto": 87500,
+      "moneda": "CRC",
+      "estado": "pendiente",
+      "fechaVencimiento": null,
+      "observaciones": "Factura reciente"
+    },
+    {
+      "id": "F003",
+      "numero": "F003",
+      "cliente": "Distribuidora Norte S.A.",
+      "identificacionCliente": "3101555666",
+      "fechaEmision": "2026-10-01",
+      "diasHabilesCredito": 10,
+      "monto": 132000,
+      "moneda": "CRC",
+      "estado": "pendiente",
+      "fechaVencimiento": null,
+      "observaciones": "Factura con plazo distinto"
+    }
+  ],
+  "historial": [
+    {
+      "id": "eqcIrWQoQHk",
+      "facturaId": "F001",
+      "fechaRegistro": "2026-10-19T19:32:46.229Z",
+      "estado": "vencida",
+      "fechaVencimiento": "2026-09-23",
+      "tipoFactura": "nacional",
+      "prioridadCobro": "alta",
+      "estadoAnterior": null,
+      "tendencia": "sin_historial_previo",
+      "mensajeTendencia": "Primera ejecución registrada para esta factura; aún no hay comparación."
+    },
+    {
+      "id": "Ay-LpzsCs6g",
+      "facturaId": "F001",
+      "fechaRegistro": "2026-10-19T19:47:47.987Z",
+      "estado": "vencida",
+      "fechaVencimiento": "2026-09-23",
+      "tipoFactura": "nacional",
+      "prioridadCobro": "alta",
+      "estadoAnterior": "vencida",
+      "tendencia": "sin_cambio",
+      "mensajeTendencia": "El estado se mantiene en vencida respecto a la ejecución anterior."
+    },
+    {
+      "id": "Ob_E7SKdnb0",
+      "facturaId": "F001",
+      "fechaRegistro": "2026-10-19T19:59:49.373Z",
+      "estado": "vencida",
+      "fechaVencimiento": "2026-09-23",
+      "tipoFactura": "nacional",
+      "prioridadCobro": "alta",
+      "estadoAnterior": "vencida",
+      "tendencia": "sin_cambio",
+      "mensajeTendencia": "El estado se mantiene en vencida respecto a la ejecución anterior."
+    },
+    {
+      "id": "WrMQcYTPxQs",
+      "facturaId": "F001",
+      "fechaRegistro": "2026-10-19T20:23:16.362Z",
+      "estado": "vencida",
+      "fechaVencimiento": "2026-09-23",
+      "tipoFactura": "nacional",
+      "prioridadCobro": "alta",
+      "estadoAnterior": "vencida",
+      "tendencia": "sin_cambio",
+      "mensajeTendencia": "El estado se mantiene en vencida respecto a la ejecución anterior."
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}

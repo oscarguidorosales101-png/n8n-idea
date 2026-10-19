@@ -1,0 +1,350 @@
+{
+  "name": "Laboratorio 1 - Facturación y días hábiles (POO)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "facturas",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Webhook Postman",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "facturas-laboratorio-poo"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validación tolerante para cuerpos recibidos desde Webhook de n8n.\n// Acepta body JSON como objeto, body como texto JSON y facturaId en raíz.\nconst entrada = $json ?? {};\nlet body = entrada.body ?? entrada;\n\nif (typeof body === 'string') {\n  try {\n    body = JSON.parse(body);\n  } catch (e) {\n    return [{ json: {\n      valido: false,\n      httpStatus: 400,\n      error: 'JSON_INVALIDO',\n      mensaje: 'El body debe ser JSON válido. Usa Body > raw > JSON en Postman.'\n    }}];\n  }\n}\n\n// Algunos clientes/nodos pueden envolver los datos en otra propiedad.\nif (body && typeof body === 'object' && body.data && typeof body.data === 'object' && body.facturaId === undefined) {\n  body = body.data;\n}\n\nlet facturaId = body?.facturaId ?? entrada.facturaId;\nif (facturaId !== undefined && facturaId !== null) {\n  facturaId = String(facturaId).trim();\n}\n\nif (!facturaId) {\n  return [{ json: {\n    valido: false,\n    httpStatus: 400,\n    error: 'FACTURA_ID_REQUERIDO',\n    mensaje: 'Falta facturaId. Envía {\"facturaId\":\"F001\"} en Body > raw > JSON.',\n    recibido: entrada\n  }}];\n}\n\nreturn [{ json: { valido: true, facturaId } }];"
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "Validar entrada",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a1000000-0000-4000-8000-000000000011",
+              "leftValue": "={{ $json.valido }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "¿Entrada válida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000004",
+      "name": "Responder 400",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        680,
+        470
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:3000/facturas/{{ $json.facturaId }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000005",
+      "name": "Obtener factura",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        220
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://date.nager.at/api/v3/PublicHolidays/{{ $json.fechaEmision.slice(0, 4) }}/CR",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000006",
+      "name": "Consultar feriados CR",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        180
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// La misma regla de negocio se puede probar fuera de n8n con clases equivalentes en JavaScript.\nclass Factura {\n  constructor(datos) {\n    this.id = datos.id;\n    this.fechaEmision = datos.fechaEmision;\n    this.diasHabilesCredito = Number(datos.diasHabilesCredito ?? 15);\n    this.estado = datos.estado ?? 'pendiente';\n  }\n\n  validar() {\n    if (!this.id) throw new Error('La factura no contiene identificador.');\n    if (!this.fechaEmision || !/^\\d{4}-\\d{2}-\\d{2}$/.test(this.fechaEmision)) {\n      throw new Error('La fechaEmision debe tener formato YYYY-MM-DD.');\n    }\n    if (!Number.isInteger(this.diasHabilesCredito) || this.diasHabilesCredito < 1) {\n      throw new Error('diasHabilesCredito debe ser un entero positivo.');\n    }\n  }\n\n  clasificar(fechaVencimiento, hoy) {\n    return hoy > fechaVencimiento ? 'vencida' : 'pendiente';\n  }\n}\n\nclass CalendarioLaboral {\n  constructor(feriados) {\n    this.feriados = new Set((feriados || []).map(f => f.date).filter(Boolean));\n  }\n\n  esDiaHabil(fecha) {\n    const dia = fecha.getUTCDay();\n    const iso = fecha.toISOString().slice(0, 10);\n    return dia !== 0 && dia !== 6 && !this.feriados.has(iso);\n  }\n\n  sumarDiasHabiles(fechaISO, cantidad) {\n    const fecha = new Date(`${fechaISO}T12:00:00.000Z`);\n    let sumados = 0;\n    while (sumados < cantidad) {\n      fecha.setUTCDate(fecha.getUTCDate() + 1);\n      if (this.esDiaHabil(fecha)) sumados++;\n    }\n    return fecha.toISOString().slice(0, 10);\n  }\n}\n\nconst facturaData = $('Obtener factura').first().json;\nconst rawFeriados = $input.all().map(item => item.json);\nconst feriados = rawFeriados.flatMap(item => Array.isArray(item) ? item : (item && item.date ? [item] : []));\nconst factura = new Factura(facturaData);\nfactura.validar();\n\nconst calendario = new CalendarioLaboral(feriados);\nconst fechaVencimiento = calendario.sumarDiasHabiles(\n  factura.fechaEmision,\n  factura.diasHabilesCredito\n);\nconst hoy = new Date().toISOString().slice(0, 10);\nconst estado = factura.clasificar(fechaVencimiento, hoy);\n\nconst facturaActualizada = {\n  ...facturaData,\n  fechaVencimiento,\n  estado,\n  diasHabilesCredito: factura.diasHabilesCredito,\n  ultimaRevision: new Date().toISOString(),\n  reglaAplicada: 'Vencimiento calculado en días hábiles; se excluyen sábados, domingos y feriados de Costa Rica.'\n};\n\nreturn [{ json: {\n  facturaId: factura.id,\n  fechaVencimiento,\n  estado,\n  facturaActualizada,\n  mensaje: estado === 'vencida'\n    ? `La factura ${factura.id} está vencida.`\n    : `La factura ${factura.id} sigue pendiente; todavía no vence.`\n}}];",
+        "mode": "runOnceForAllItems"
+      },
+      "id": "a1000000-0000-4000-8000-000000000007",
+      "name": "Calcular vencimiento POO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1160,
+        180
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://localhost:3000/facturas/{{ $json.facturaId }}",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json.facturaActualizada) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000008",
+      "name": "Actualizar factura JSON Server",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1400,
+        180
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000009",
+      "name": "Responder resultado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1640,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'FACTURA_NO_ENCONTRADA', mensaje: 'No existe una factura con ese facturaId. Verifica el identificador en db.json.' } }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "Responder 404 factura",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        920,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'API_FERIADOS_NO_DISPONIBLE', mensaje: 'No fue posible consultar la Public Holiday API. Intenta nuevamente más tarde.' } }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000012",
+      "name": "Responder 502 API",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1160,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: 'ERROR_ACTUALIZANDO_FACTURA', mensaje: 'La factura fue calculada, pero JSON Server no pudo guardar el cambio.' } }}",
+        "options": {
+          "responseCode": 502
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000013",
+      "name": "Responder 502 JSON Server",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1640,
+        420
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Postman": {
+      "main": [
+        [
+          {
+            "node": "Validar entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar entrada": {
+      "main": [
+        [
+          {
+            "node": "¿Entrada válida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Entrada válida?": {
+      "main": [
+        [
+          {
+            "node": "Obtener factura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener factura": {
+      "main": [
+        [
+          {
+            "node": "Consultar feriados CR",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 404 factura",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar feriados CR": {
+      "main": [
+        [
+          {
+            "node": "Calcular vencimiento POO",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 502 API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular vencimiento POO": {
+      "main": [
+        [
+          {
+            "node": "Actualizar factura JSON Server",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 502 API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Actualizar factura JSON Server": {
+      "main": [
+        [
+          {
+            "node": "Responder resultado",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder 502 JSON Server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "a1000000-0000-4000-8000-000000000099",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

@@ -1,0 +1,47 @@
+{
+  "facturas": [
+    {
+      "id": "F001",
+      "numero": "F001",
+      "cliente": "Comercial La Central S.A.",
+      "identificacionCliente": "3101123456",
+      "fechaEmision": "2026-09-01",
+      "diasHabilesCredito": 15,
+      "monto": 250000,
+      "moneda": "CRC",
+      "estado": "pendiente",
+      "fechaVencimiento": null,
+      "observaciones": "Factura de prueba",
+      "tipoFactura": "nacional"
+    },
+    {
+      "id": "F002",
+      "numero": "F002",
+      "cliente": "Servicios del Valle S.R.L.",
+      "identificacionCliente": "3101987654",
+      "fechaEmision": "2026-10-12",
+      "diasHabilesCredito": 15,
+      "monto": 87500,
+      "moneda": "CRC",
+      "estado": "pendiente",
+      "fechaVencimiento": null,
+      "observaciones": "Factura reciente",
+      "tipoFactura": "nacional"
+    },
+    {
+      "id": "F003",
+      "numero": "F003",
+      "cliente": "Distribuidora Norte S.A.",
+      "identificacionCliente": "3101555666",
+      "fechaEmision": "2026-10-01",
+      "diasHabilesCredito": 10,
+      "monto": 132000,
+      "moneda": "CRC",
+      "estado": "pendiente",
+      "fechaVencimiento": null,
+      "observaciones": "Factura con plazo distinto",
+      "tipoFactura": "especial"
+    }
+  ],
+  "historial": []
+}
